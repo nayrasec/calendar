@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Constellation ✨</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Starfield Background -->
+  <div class="starfield"></div>
+  
+  <!-- Header -->
+  <header class="hero">
+    <h1>Our Constellation</h1>
+    <p class="subtitle">Every star tells a story of us ✨</p>
+    <button class="add-event-btn" onclick="toggleEventForm()">+ Add New Memory</button>
+  </header>
+
+  <!-- Add Event Form (Hidden by default) -->
+  <div class="event-form-container" id="eventFormContainer">
+    <div class="event-form">
+      <h2>Add a New Memory</h2>
+      <form onsubmit="addNewEvent(event)">
+        <div class="form-group">
+          <label for="eventDate">Date</label>
+          <input type="date" id="eventDate" required>
+        </div>
+        <div class="form-group">
+          <label for="eventTitle">Title</label>
+          <input type="text" id="eventTitle" placeholder="Our first date..." required>
+        </div>
+        <div class="form-group">
+          <label for="eventDescription">Description</label>
+          <textarea id="eventDescription" rows="4" placeholder="What made this moment special?" required></textarea>
+        </div>
+        <div class="form-buttons">
+          <button type="submit" class="btn-primary">✨ Add to Our Constellation</button>
+          <button type="button" class="btn-secondary" onclick="toggleEventForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Timeline Container -->
+  <div class="timeline-container">
+    <svg class="constellation-lines" id="constellationLines"></svg>
+    
+    <div class="timeline" id="timeline">
+      <!-- Initial Events -->
+      <div class="event" data-date="2023-10-12">
+        <div class="star" data-index="0">
+          <div class="star-glow"></div>
+          <div class="star-core"></div>
+        </div>
+        <div class="event-popup">
+          <div class="popup-date">October 12, 2023</div>
+          <div class="popup-title">First Met ☕</div>
+          <div class="popup-description">The day we first met. The coffee was terrible, but the conversation wasn't.</div>
+        </div>
+      </div>
+
+      <div class="event" data-date="2023-12-31">
+        <div class="star" data-index="1">
+          <div class="star-glow"></div>
+          <div class="star-core"></div>
+        </div>
+        <div class="event-popup">
+          <div class="popup-date">December 31, 2023</div>
+          <div class="popup-title">New Year's Eve 🎆</div>
+          <div class="popup-description">Our first New Year's Eve together, counting down to midnight with champagne and dreams.</div>
+        </div>
+      </div>
+
+      <div class="event" data-date="2024-03-15">
+        <div class="star" data-index="2">
+          <div class="star-glow"></div>
+          <div class="star-core"></div>
+        </div>
+        <div class="event-popup">
+          <div class="popup-date">March 15, 2024</div>
+          <div class="popup-title">Road Trip Adventure 🚗</div>
+          <div class="popup-description">That spontaneous road trip where we got totally lost but found each other even more.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Our journey continues... 💫</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Our Constellation ✨</title>
+  <title>Our Universe ✨</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,65 +12,67 @@
   
   <!-- Header -->
   <header class="hero">
-    <h1>✨ Our Constellation ✨</h1>
-    <p class="subtitle">Every star is a precious moment we shared</p>
-    <div class="header-buttons">
-      <button class="add-event-btn" onclick="toggleEventForm()">+ Add New Memory</button>
-      <button class="help-btn" onclick="toggleHelp()">ℹ️ Help</button>
-    </div>
+    <h1>✨ Our Universe ✨</h1>
+    <p class="subtitle">Where every star holds a memory</p>
   </header>
 
-  <!-- Help Modal -->
-  <div class="help-modal" id="helpModal">
-    <div class="help-content">
-      <span class="help-close" onclick="toggleHelp()">×</span>
-      <h2>How to Use Your Constellation 🌟</h2>
-      <div class="help-text">
-        <p><strong>💾 Data Storage:</strong> All your memories are saved in your browser's localStorage. They persist even after closing the browser!</p>
-        <p><strong>➕ Add Memory:</strong> Click "+ Add New Memory" to add a new date and story.</p>
-        <p><strong>✏️ Edit Memory:</strong> Hover over a star and click the edit button to modify it.</p>
-        <p><strong>🗑️ Delete Memory:</strong> Hover over a star and click the delete button to remove it.</p>
-        <p><strong>⭐ View Details:</strong> Hover over any star to see the full memory details!</p>
-      </div>
-    </div>
+  <!-- Universe Container -->
+  <div class="universe-container">
+    <!-- Constellations will be rendered here -->
+    <div id="constellationsContainer"></div>
   </div>
 
-  <!-- Add/Edit Event Form (Hidden by default) -->
-  <div class="event-form-container" id="eventFormContainer">
-    <div class="event-form">
-      <h2 id="formTitle">Add a New Memory</h2>
-      <form onsubmit="saveEventData(event)">
+  <!-- Add Memory Modal -->
+  <div class="memory-modal" id="memoryModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeMemoryModal()">×</span>
+      <h2>Add Memory to Star</h2>
+      <form onsubmit="saveMemory(event)">
         <div class="form-group">
-          <label for="eventDate">Date</label>
-          <input type="date" id="eventDate" required>
+          <label for="memoryTitle">Memory Title</label>
+          <input type="text" id="memoryTitle" placeholder="Name this special moment..." required>
         </div>
         <div class="form-group">
-          <label for="eventTitle">Title</label>
-          <input type="text" id="eventTitle" placeholder="Our first date..." required>
+          <label for="memoryDate">Date (Optional)</label>
+          <input type="date" id="memoryDate">
         </div>
         <div class="form-group">
-          <label for="eventDescription">Description</label>
-          <textarea id="eventDescription" rows="4" placeholder="What made this moment special?" required></textarea>
+          <label for="memoryDescription">Description</label>
+          <textarea id="memoryDescription" rows="4" placeholder="Tell the story..." required></textarea>
         </div>
         <div class="form-buttons">
-          <button type="submit" class="btn-primary" id="submitBtn">✨ Add to Our Constellation</button>
-          <button type="button" class="btn-secondary" onclick="toggleEventForm()">Cancel</button>
+          <button type="submit" class="btn-primary">💾 Save Memory</button>
+          <button type="button" class="btn-secondary" onclick="closeMemoryModal()">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Timeline Container -->
-  <div class="timeline-container">
-    <svg class="constellation-lines" id="constellationLines"></svg>
-    
-    <div class="timeline" id="timeline">
-      <!-- Events will be rendered here by JavaScript -->
+  <!-- Add Constellation Modal -->
+  <div class="constellation-modal" id="constellationModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeConstellationModal()">×</span>
+      <h2>Create New Constellation</h2>
+      <form onsubmit="createConstellation(event)">
+        <div class="form-group">
+          <label for="constellationName">Constellation Name</label>
+          <input type="text" id="constellationName" placeholder="e.g., AARYAN, PRIYA, FOREVER..." required maxlength="20">
+        </div>
+        <div class="form-buttons">
+          <button type="submit" class="btn-primary">✨ Create Constellation</button>
+          <button type="button" class="btn-secondary" onclick="closeConstellationModal()">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 
+  <!-- Add Constellation Button (Bottom Right) -->
+  <button class="floating-btn" onclick="openConstellationModal()" title="Create new constellation">
+    + New Constellation
+  </button>
+
   <footer>
-    <p>Our journey continues... 💫</p>
+    <p>Infinite memories in an infinite universe 💫</p>
   </footer>
 
   <script src="script.js"></script>

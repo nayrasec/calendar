@@ -1,190 +1,309 @@
-// ===== Data Management =====
-let events = [];
-let editingId = null;
+// ===== State Management =====
+const API_URL = 'http://localhost:8000/api';
+let constellations = [];
+let selectedConstellationId = null;
+let selectedStarIndex = null;
 
-// Default events
-const defaultEvents = [
-  {
-    id: 1,
-    date: '2023-10-12',
-    title: 'First Met ☕',
-    description: 'The day we first met. The coffee was terrible, but the conversation wasn\'t.'
-  },
-  {
-    id: 2,
-    date: '2023-12-31',
-    title: 'New Year\'s Eve 🎆',
-    description: 'Our first New Year\'s Eve together, counting down to midnight with champagne and dreams.'
-  },
-  {
-    id: 3,
-    date: '2024-03-15',
-    title: 'Road Trip Adventure 🚗',
-    description: 'That spontaneous road trip where we got totally lost but found each other even more.'
-  }
-];
+// ===== Language Patterns for Star Positions =====
+const LETTER_PATTERNS = {
+  'G': [
+    {x: 100, y: 50}, {x: 150, y: 50}, {x: 200, y: 50},
+    {x: 100, y: 100}, {x: 200, y: 100},
+    {x: 100, y: 150}, {x: 150, y: 150}, {x: 200, y: 150},
+    {x: 100, y: 200}, {x: 200, y: 200},
+    {x: 100, y: 250}, {x: 150, y: 250}, {x: 200, y: 250}
+  ],
+  'A': [
+    {x: 100, y: 50},
+    {x: 150, y: 100}, {x: 200, y: 50},
+    {x: 100, y: 150}, {x: 150, y: 150}, {x: 200, y: 150},
+    {x: 100, y: 200}, {x: 200, y: 200},
+    {x: 100, y: 250}, {x: 200, y: 250}
+  ],
+  'U': [
+    {x: 100, y: 50}, {x: 200, y: 50},
+    {x: 100, y: 100}, {x: 200, y: 100},
+    {x: 100, y: 150}, {x: 200, y: 150},
+    {x: 100, y: 200}, {x: 200, y: 200},
+    {x: 100, y: 250}, {x: 150, y: 300}, {x: 200, y: 250}
+  ],
+  'R': [
+    {x: 100, y: 50}, {x: 150, y: 50}, {x: 200, y: 50},
+    {x: 100, y: 100}, {x: 200, y: 100},
+    {x: 100, y: 150}, {x: 150, y: 150}, {x: 200, y: 150},
+    {x: 100, y: 200}, {x: 200, y: 200},
+    {x: 100, y: 250}, {x: 200, y: 250}
+  ],
+  'I': [
+    {x: 150, y: 50},
+    {x: 150, y: 100},
+    {x: 150, y: 150},
+    {x: 150, y: 200},
+    {x: 150, y: 250}
+  ]
+};
 
-// Load events from localStorage on page load
-function loadEvents() {
-  const savedEvents = localStorage.getItem('constellationEvents');
-  if (savedEvents) {
-    try {
-      events = JSON.parse(savedEvents);
-    } catch (e) {
-      console.error('Error loading saved events:', e);
-      events = JSON.parse(JSON.stringify(defaultEvents));
-    }
-  } else {
-    events = JSON.parse(JSON.stringify(defaultEvents));
-  }
-  
-  // Sort by date
-  events.sort((a, b) => new Date(a.date) - new Date(b.date));
-}
+// Get star pattern for a name
+function getStarPattern(name) {
+  const pattern = [];
+  let xOffset = 0;
 
-// Save events to localStorage
-function saveEvents() {
-  localStorage.setItem('constellationEvents', JSON.stringify(events));
-}
-
-// ===== Modal Toggles =====
-function toggleEventForm() {
-  const formContainer = document.getElementById('eventFormContainer');
-  formContainer.classList.toggle('active');
-  
-  if (!formContainer.classList.contains('active')) {
-    resetForm();
-  }
-}
-
-function toggleHelp() {
-  const helpModal = document.getElementById('helpModal');
-  helpModal.classList.toggle('active');
-}
-
-// ===== Form Management =====
-function resetForm() {
-  editingId = null;
-  document.getElementById('formTitle').textContent = 'Add a New Memory';
-  document.getElementById('submitBtn').textContent = '✨ Add to Our Constellation';
-  document.querySelector('.event-form form').reset();
-}
-
-function editEvent(id) {
-  editingId = id;
-  const event = events.find(e => e.id === id);
-  
-  if (!event) return;
-  
-  // Populate form
-  document.getElementById('eventDate').value = event.date;
-  document.getElementById('eventTitle').value = event.title;
-  document.getElementById('eventDescription').value = event.description;
-  
-  // Update UI
-  document.getElementById('formTitle').textContent = 'Edit Memory';
-  document.getElementById('submitBtn').textContent = '✨ Update Memory';
-  
-  // Open form
-  toggleEventForm();
-}
-
-function deleteEvent(id) {
-  if (confirm('Are you sure you want to delete this memory? 😢')) {
-    events = events.filter(e => e.id !== id);
-    saveEvents();
-    renderTimeline();
-    showMessage('Memory removed from constellation', '#ff6482');
-  }
-}
-
-function saveEventData(e) {
-  e.preventDefault();
-  
-  const date = document.getElementById('eventDate').value;
-  const title = document.getElementById('eventTitle').value;
-  const description = document.getElementById('eventDescription').value;
-  
-  if (editingId) {
-    // Update existing event
-    const event = events.find(e => e.id === editingId);
-    if (event) {
-      event.date = date;
-      event.title = title;
-      event.description = description;
-    }
-    showMessage('✨ Memory updated!');
-  } else {
-    // Create new event
-    const newEvent = {
-      id: Date.now(),
-      date: date,
-      title: title,
-      description: description
-    };
-    events.push(newEvent);
-    showMessage('✨ Memory added to your constellation!');
-  }
-  
-  // Sort and save
-  events.sort((a, b) => new Date(a.date) - new Date(b.date));
-  saveEvents();
-  
-  // Refresh UI
-  renderTimeline();
-  toggleEventForm();
-}
-
-// ===== Render Timeline =====
-function renderTimeline() {
-  const timeline = document.getElementById('timeline');
-  timeline.innerHTML = '';
-  
-  events.forEach((event, index) => {
-    const eventDiv = document.createElement('div');
-    eventDiv.className = 'event';
-    eventDiv.setAttribute('data-date', event.date);
-    
-    // Format date
-    const dateObj = new Date(event.date + 'T00:00:00');
-    const formattedDate = dateObj.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+  for (const letter of name) {
+    const letterPattern = LETTER_PATTERNS[letter] || [];
+    letterPattern.forEach(star => {
+      pattern.push({
+        x: star.x + xOffset,
+        y: star.y
+      });
     });
-    
-    eventDiv.innerHTML = `
-      <div class="star" data-event-id="${event.id}" data-index="${index}">
-        <div class="star-glow"></div>
-        <div class="star-core"></div>
-      </div>
-      <div class="event-content">
-        <div class="event-date">${formattedDate}</div>
-        <div class="event-title">${escapeHtml(event.title)}</div>
-        <div class="event-description">${escapeHtml(event.description)}</div>
-        <div class="event-actions">
-          <button class="event-btn edit-btn" onclick="editEvent(${event.id})">✏️ Edit</button>
-          <button class="event-btn delete-btn" onclick="deleteEvent(${event.id})">🗑️ Delete</button>
-        </div>
-      </div>
-    `;
-    
-    timeline.appendChild(eventDiv);
-  });
-  
-  // Reinitialize animations
-  initScrollAnimations();
-  setTimeout(() => drawConstellationLines(), 100);
+    xOffset += 300;
+  }
+
+  return pattern;
 }
 
-// Escape HTML to prevent XSS
+// ===== API FUNCTIONS =====
+
+async function fetchConstellations() {
+  try {
+    const response = await fetch(`${API_URL}/constellations`);
+    constellations = await response.json();
+    await renderConstellations();
+  } catch (error) {
+    console.error('Error fetching constellations:', error);
+    showMessage('Error loading constellations', '#ff6482');
+  }
+}
+
+async function fetchConstellation(id) {
+  try {
+    const response = await fetch(`${API_URL}/constellations/${id}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching constellation:', error);
+    return null;
+  }
+}
+
+async function createNewConstellation(name) {
+  try {
+    const response = await fetch(`${API_URL}/constellations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error);
+    }
+
+    const newConstellation = await response.json();
+    constellations.push(newConstellation);
+    await renderConstellations();
+    showMessage(`✨ Constellation "${name}" created!`);
+    closeConstellationModal();
+  } catch (error) {
+    console.error('Error creating constellation:', error);
+    showMessage(error.message || 'Error creating constellation', '#ff6482');
+  }
+}
+
+async function saveMemoryToAPI(constellation_id, star_index, title, description, date) {
+  try {
+    const response = await fetch(`${API_URL}/memories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        constellation_id,
+        star_index,
+        title,
+        description,
+        date
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error);
+    }
+
+    const memory = await response.json();
+    showMessage('💾 Memory saved to the stars!');
+    
+    // Refresh constellation data
+    await fetchConstellations();
+    closeMemoryModal();
+    return memory;
+  } catch (error) {
+    console.error('Error saving memory:', error);
+    showMessage(error.message || 'Error saving memory', '#ff6482');
+  }
+}
+
+async function deleteMemory(memoryId) {
+  try {
+    const response = await fetch(`${API_URL}/memories/${memoryId}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) throw new Error('Failed to delete memory');
+
+    showMessage('Memory removed from the universe');
+    await fetchConstellations();
+  } catch (error) {
+    console.error('Error deleting memory:', error);
+    showMessage('Error deleting memory', '#ff6482');
+  }
+}
+
+// ===== RENDER FUNCTIONS =====
+
+async function renderConstellations() {
+  const container = document.getElementById('constellationsContainer');
+  container.innerHTML = '';
+
+  for (const constellation of constellations) {
+    const constellationData = await fetchConstellation(constellation.id);
+    if (!constellationData) continue;
+
+    const group = document.createElement('div');
+    group.className = 'constellation-group';
+    group.id = `constellation-${constellation.id}`;
+
+    const title = document.createElement('div');
+    title.className = 'constellation-title';
+    title.textContent = constellation.name;
+
+    const canvas = document.createElement('div');
+    canvas.className = 'constellation-canvas';
+
+    const starPattern = getStarPattern(constellation.name);
+    const memories = constellationData.memories || [];
+
+    // Create stars
+    starPattern.forEach((position, index) => {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = position.x + 'px';
+      star.style.top = position.y + 'px';
+      star.onclick = (e) => {
+        e.stopPropagation();
+        openMemoryModal(constellation.id, index);
+      };
+
+      const starCore = document.createElement('div');
+      starCore.className = 'star-core';
+
+      const starGlow = document.createElement('div');
+      starGlow.className = 'star-glow';
+
+      const memory = memories.find(m => m.star_index === index);
+      const info = document.createElement('div');
+      info.className = 'star-info';
+
+      if (memory) {
+        info.innerHTML = `
+          <div class="star-info-title">${escapeHtml(memory.title)}</div>
+          <div class="star-info-description">${escapeHtml(memory.description)}</div>
+        `;
+      } else {
+        info.innerHTML = `<div class="star-info-empty">Click to add memory ✨</div>`;
+      }
+
+      star.appendChild(starCore);
+      star.appendChild(starGlow);
+      star.appendChild(info);
+      canvas.appendChild(star);
+    });
+
+    group.appendChild(title);
+    group.appendChild(canvas);
+    container.appendChild(group);
+  }
+}
+
+// ===== MODAL FUNCTIONS =====
+
+function openMemoryModal(constellationId, starIndex) {
+  selectedConstellationId = constellationId;
+  selectedStarIndex = starIndex;
+
+  // Try to find existing memory to edit
+  const constellation = constellations.find(c => c.id === constellationId);
+  if (constellation) {
+    // Fetch constellation data with memories
+    fetchConstellation(constellationId).then(data => {
+      const memory = data.memories?.find(m => m.star_index === starIndex);
+      if (memory) {
+        document.getElementById('memoryTitle').value = memory.title;
+        document.getElementById('memoryDate').value = memory.date || '';
+        document.getElementById('memoryDescription').value = memory.description;
+      } else {
+        document.getElementById('memoryTitle').value = '';
+        document.getElementById('memoryDate').value = '';
+        document.getElementById('memoryDescription').value = '';
+      }
+    });
+  }
+
+  document.getElementById('memoryModal').classList.add('active');
+}
+
+function closeMemoryModal() {
+  document.getElementById('memoryModal').classList.remove('active');
+  selectedConstellationId = null;
+  selectedStarIndex = null;
+  document.querySelector('#memoryModal form').reset();
+}
+
+function openConstellationModal() {
+  document.getElementById('constellationModal').classList.add('active');
+}
+
+function closeConstellationModal() {
+  document.getElementById('constellationModal').classList.remove('active');
+  document.querySelector('#constellationModal form').reset();
+}
+
+// ===== FORM HANDLERS =====
+
+function saveMemory(e) {
+  e.preventDefault();
+
+  const title = document.getElementById('memoryTitle').value;
+  const date = document.getElementById('memoryDate').value;
+  const description = document.getElementById('memoryDescription').value;
+
+  if (!title || !description) {
+    showMessage('Please fill in all required fields', '#ff6482');
+    return;
+  }
+
+  saveMemoryToAPI(selectedConstellationId, selectedStarIndex, title, description, date);
+}
+
+function createConstellation(e) {
+  e.preventDefault();
+
+  const constellationName = document.getElementById('constellationName').value;
+
+  if (!constellationName) {
+    showMessage('Please enter a constellation name', '#ff6482');
+    return;
+  }
+
+  createNewConstellation(constellationName);
+}
+
+// ===== UTILITY FUNCTIONS =====
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// ===== Message Display =====
 function showMessage(message, color = '#667eea') {
   const messageEl = document.createElement('div');
   messageEl.style.cssText = `
@@ -202,7 +321,7 @@ function showMessage(message, color = '#667eea') {
   `;
   messageEl.textContent = message;
   document.body.appendChild(messageEl);
-  
+
   setTimeout(() => {
     messageEl.style.animation = 'slideOut 0.5s ease';
     setTimeout(() => messageEl.remove(), 500);
@@ -217,105 +336,20 @@ function adjustBrightness(color, factor) {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
-// ===== Scroll-based Animations =====
-function initScrollAnimations() {
-  const eventElements = document.querySelectorAll('.event');
-  
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        setTimeout(() => {
-          entry.target.classList.add('visible');
-        }, 100);
-      }
-    });
-  }, {
-    threshold: 0.3
-  });
-  
-  eventElements.forEach(event => {
-    observer.observe(event);
-  });
-}
+// ===== Initialize =====
 
-// ===== Draw Constellation Lines =====
-function drawConstellationLines() {
-  const svg = document.getElementById('constellationLines');
-  const container = document.querySelector('.timeline-container');
-  
-  if (!svg || !container) return;
-  
-  // Clear previous content
-  svg.innerHTML = `
-    <defs>
-      <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-        <stop offset="50%" style="stop-color:#c06bff;stop-opacity:1" />
-        <stop offset="100%" style="stop-color:#ff6b9d;stop-opacity:1" />
-      </linearGradient>
-    </defs>
-  `;
-  
-  const stars = document.querySelectorAll('.star');
-  if (stars.length < 2) return;
-  
-  // Draw smooth lines between consecutive stars
-  for (let i = 0; i < stars.length - 1; i++) {
-    const star1 = stars[i];
-    const star2 = stars[i + 1];
-    
-    const rect1 = star1.getBoundingClientRect();
-    const rect2 = star2.getBoundingClientRect();
-    const svgRect = svg.getBoundingClientRect();
-    
-    // Calculate positions relative to SVG
-    const x1 = rect1.left - svgRect.left + rect1.width / 2;
-    const y1 = rect1.top - svgRect.top + rect1.height / 2;
-    const x2 = rect2.left - svgRect.left + rect2.width / 2;
-    const y2 = rect2.top - svgRect.top + rect2.height / 2;
-    
-    // Create smooth cubic bezier curve
-    const controlPointY = y1 + (y2 - y1) / 2;
-    const d = `M ${x1} ${y1} C ${x1} ${controlPointY}, ${x2} ${controlPointY}, ${x2} ${y2}`;
-    
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    line.setAttribute('d', d);
-    line.setAttribute('class', 'constellation-line');
-    
-    svg.appendChild(line);
-  }
-}
-
-// ===== Initialize on Load =====
 document.addEventListener('DOMContentLoaded', () => {
-  // Load saved events
-  loadEvents();
-  
-  // Render timeline with data
-  renderTimeline();
-  
-  // Redraw lines on window resize with debounce
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      drawConstellationLines();
-    }, 250);
+  // Close modals when clicking outside
+  document.getElementById('memoryModal').addEventListener('click', (e) => {
+    if (e.target.id === 'memoryModal') closeMemoryModal();
   });
-  
-  // Close form when clicking outside
-  document.getElementById('eventFormContainer').addEventListener('click', (e) => {
-    if (e.target.id === 'eventFormContainer') {
-      toggleEventForm();
-    }
+
+  document.getElementById('constellationModal').addEventListener('click', (e) => {
+    if (e.target.id === 'constellationModal') closeConstellationModal();
   });
-  
-  // Close help when clicking outside
-  document.getElementById('helpModal').addEventListener('click', (e) => {
-    if (e.target.id === 'helpModal') {
-      toggleHelp();
-    }
-  });
+
+  // Load constellations from API
+  fetchConstellations();
 });
 
 // ===== CSS Animations (injected) =====

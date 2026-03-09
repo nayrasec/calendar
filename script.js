@@ -1,12 +1,45 @@
 // ===== Data Management =====
 let events = [];
+let editingId = null;
+
+// Default events
+const defaultEvents = [
+  {
+    id: 1,
+    date: '2023-10-12',
+    title: 'First Met ☕',
+    description: 'The day we first met. The coffee was terrible, but the conversation wasn\'t.'
+  },
+  {
+    id: 2,
+    date: '2023-12-31',
+    title: 'New Year\'s Eve 🎆',
+    description: 'Our first New Year\'s Eve together, counting down to midnight with champagne and dreams.'
+  },
+  {
+    id: 3,
+    date: '2024-03-15',
+    title: 'Road Trip Adventure 🚗',
+    description: 'That spontaneous road trip where we got totally lost but found each other even more.'
+  }
+];
 
 // Load events from localStorage on page load
 function loadEvents() {
   const savedEvents = localStorage.getItem('constellationEvents');
   if (savedEvents) {
-    events = JSON.parse(savedEvents);
+    try {
+      events = JSON.parse(savedEvents);
+    } catch (e) {
+      console.error('Error loading saved events:', e);
+      events = JSON.parse(JSON.stringify(defaultEvents));
+    }
+  } else {
+    events = JSON.parse(JSON.stringify(defaultEvents));
   }
+  
+  // Sort by date
+  events.sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
 // Save events to localStorage
@@ -14,50 +47,92 @@ function saveEvents() {
   localStorage.setItem('constellationEvents', JSON.stringify(events));
 }
 
-// ===== Event Form Toggle =====
+// ===== Modal Toggles =====
 function toggleEventForm() {
   const formContainer = document.getElementById('eventFormContainer');
   formContainer.classList.toggle('active');
   
-  // Reset form when closing
   if (!formContainer.classList.contains('active')) {
-    document.querySelector('.event-form form').reset();
+    resetForm();
   }
 }
 
-// ===== Add New Event =====
-function addNewEvent(e) {
+function toggleHelp() {
+  const helpModal = document.getElementById('helpModal');
+  helpModal.classList.toggle('active');
+}
+
+// ===== Form Management =====
+function resetForm() {
+  editingId = null;
+  document.getElementById('formTitle').textContent = 'Add a New Memory';
+  document.getElementById('submitBtn').textContent = '✨ Add to Our Constellation';
+  document.querySelector('.event-form form').reset();
+}
+
+function editEvent(id) {
+  editingId = id;
+  const event = events.find(e => e.id === id);
+  
+  if (!event) return;
+  
+  // Populate form
+  document.getElementById('eventDate').value = event.date;
+  document.getElementById('eventTitle').value = event.title;
+  document.getElementById('eventDescription').value = event.description;
+  
+  // Update UI
+  document.getElementById('formTitle').textContent = 'Edit Memory';
+  document.getElementById('submitBtn').textContent = '✨ Update Memory';
+  
+  // Open form
+  toggleEventForm();
+}
+
+function deleteEvent(id) {
+  if (confirm('Are you sure you want to delete this memory? 😢')) {
+    events = events.filter(e => e.id !== id);
+    saveEvents();
+    renderTimeline();
+    showMessage('Memory removed from constellation', '#ff6482');
+  }
+}
+
+function saveEventData(e) {
   e.preventDefault();
   
   const date = document.getElementById('eventDate').value;
   const title = document.getElementById('eventTitle').value;
   const description = document.getElementById('eventDescription').value;
   
-  // Create event object
-  const newEvent = {
-    date: date,
-    title: title,
-    description: description,
-    id: Date.now()
-  };
+  if (editingId) {
+    // Update existing event
+    const event = events.find(e => e.id === editingId);
+    if (event) {
+      event.date = date;
+      event.title = title;
+      event.description = description;
+    }
+    showMessage('✨ Memory updated!');
+  } else {
+    // Create new event
+    const newEvent = {
+      id: Date.now(),
+      date: date,
+      title: title,
+      description: description
+    };
+    events.push(newEvent);
+    showMessage('✨ Memory added to your constellation!');
+  }
   
-  // Add to events array
-  events.push(newEvent);
-  
-  // Sort events by date
+  // Sort and save
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
-  
-  // Save to localStorage
   saveEvents();
   
-  // Re-render timeline
+  // Refresh UI
   renderTimeline();
-  
-  // Close form
   toggleEventForm();
-  
-  // Show success animation
-  showSuccessMessage();
 }
 
 // ===== Render Timeline =====
@@ -71,7 +146,7 @@ function renderTimeline() {
     eventDiv.setAttribute('data-date', event.date);
     
     // Format date
-    const dateObj = new Date(event.date);
+    const dateObj = new Date(event.date + 'T00:00:00');
     const formattedDate = dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -79,14 +154,18 @@ function renderTimeline() {
     });
     
     eventDiv.innerHTML = `
-      <div class="star" data-index="${index}">
+      <div class="star" data-event-id="${event.id}" data-index="${index}">
         <div class="star-glow"></div>
         <div class="star-core"></div>
       </div>
-      <div class="event-popup">
-        <div class="popup-date">${formattedDate}</div>
-        <div class="popup-title">${escapeHtml(event.title)}</div>
-        <div class="popup-description">${escapeHtml(event.description)}</div>
+      <div class="event-content">
+        <div class="event-date">${formattedDate}</div>
+        <div class="event-title">${escapeHtml(event.title)}</div>
+        <div class="event-description">${escapeHtml(event.description)}</div>
+        <div class="event-actions">
+          <button class="event-btn edit-btn" onclick="editEvent(${event.id})">✏️ Edit</button>
+          <button class="event-btn delete-btn" onclick="deleteEvent(${event.id})">🗑️ Delete</button>
+        </div>
       </div>
     `;
     
@@ -95,7 +174,7 @@ function renderTimeline() {
   
   // Reinitialize animations
   initScrollAnimations();
-  drawConstellationLines();
+  setTimeout(() => drawConstellationLines(), 100);
 }
 
 // Escape HTML to prevent XSS
@@ -105,28 +184,37 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// ===== Success Message =====
-function showSuccessMessage() {
-  const message = document.createElement('div');
-  message.style.cssText = `
+// ===== Message Display =====
+function showMessage(message, color = '#667eea') {
+  const messageEl = document.createElement('div');
+  messageEl.style.cssText = `
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    top: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, ${color} 0%, ${adjustBrightness(color, 1.2)} 100%);
     color: white;
-    padding: 20px 30px;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    padding: 18px 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     z-index: 10000;
+    font-weight: 500;
     animation: slideIn 0.5s ease;
   `;
-  message.textContent = '✨ Memory added to your constellation!';
-  document.body.appendChild(message);
+  messageEl.textContent = message;
+  document.body.appendChild(messageEl);
   
   setTimeout(() => {
-    message.style.animation = 'slideOut 0.5s ease';
-    setTimeout(() => message.remove(), 500);
+    messageEl.style.animation = 'slideOut 0.5s ease';
+    setTimeout(() => messageEl.remove(), 500);
   }, 3000);
+}
+
+function adjustBrightness(color, factor) {
+  const hex = color.replace('#', '');
+  const r = Math.min(255, Math.round(parseInt(hex.substring(0, 2), 16) * factor));
+  const g = Math.min(255, Math.round(parseInt(hex.substring(2, 4), 16) * factor));
+  const b = Math.min(255, Math.round(parseInt(hex.substring(4, 6), 16) * factor));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 // ===== Scroll-based Animations =====
@@ -136,16 +224,9 @@ function initScrollAnimations() {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        
-        // Animate constellation line
-        const index = parseInt(entry.target.querySelector('.star').getAttribute('data-index'));
-        if (index > 0) {
-          const line = document.querySelector(`.constellation-line[data-from="${index - 1}"][data-to="${index}"]`);
-          if (line) {
-            line.classList.add('animate');
-          }
-        }
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, 100);
       }
     });
   }, {
@@ -160,6 +241,11 @@ function initScrollAnimations() {
 // ===== Draw Constellation Lines =====
 function drawConstellationLines() {
   const svg = document.getElementById('constellationLines');
+  const container = document.querySelector('.timeline-container');
+  
+  if (!svg || !container) return;
+  
+  // Clear previous content
   svg.innerHTML = `
     <defs>
       <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -171,35 +257,30 @@ function drawConstellationLines() {
   `;
   
   const stars = document.querySelectorAll('.star');
+  if (stars.length < 2) return;
   
-  // Draw lines between consecutive stars
+  // Draw smooth lines between consecutive stars
   for (let i = 0; i < stars.length - 1; i++) {
     const star1 = stars[i];
     const star2 = stars[i + 1];
     
     const rect1 = star1.getBoundingClientRect();
     const rect2 = star2.getBoundingClientRect();
-    const timelineContainer = document.querySelector('.timeline-container').getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
     
-    const x1 = rect1.left - timelineContainer.left + rect1.width / 2;
-    const y1 = rect1.top - timelineContainer.top + rect1.height / 2;
-    const x2 = rect2.left - timelineContainer.left + rect2.width / 2;
-    const y2 = rect2.top - timelineContainer.top + rect2.height / 2;
+    // Calculate positions relative to SVG
+    const x1 = rect1.left - svgRect.left + rect1.width / 2;
+    const y1 = rect1.top - svgRect.top + rect1.height / 2;
+    const x2 = rect2.left - svgRect.left + rect2.width / 2;
+    const y2 = rect2.top - svgRect.top + rect2.height / 2;
+    
+    // Create smooth cubic bezier curve
+    const controlPointY = y1 + (y2 - y1) / 2;
+    const d = `M ${x1} ${y1} C ${x1} ${controlPointY}, ${x2} ${controlPointY}, ${x2} ${y2}`;
     
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    
-    // Create a curved path
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-    const offsetX = (y2 - y1) * 0.2;
-    const offsetY = (x2 - x1) * -0.2;
-    
-    const d = `M ${x1} ${y1} Q ${midX + offsetX} ${midY + offsetY} ${x2} ${y2}`;
-    
     line.setAttribute('d', d);
-    line.classList.add('constellation-line');
-    line.setAttribute('data-from', i);
-    line.setAttribute('data-to', i + 1);
+    line.setAttribute('class', 'constellation-line');
     
     svg.appendChild(line);
   }
@@ -207,26 +288,13 @@ function drawConstellationLines() {
 
 // ===== Initialize on Load =====
 document.addEventListener('DOMContentLoaded', () => {
-  // Load saved events or use default from HTML
+  // Load saved events
   loadEvents();
   
-  // If no saved events, extract from HTML
-  if (events.length === 0) {
-    const eventElements = document.querySelectorAll('.event');
-    eventElements.forEach(el => {
-      const date = el.getAttribute('data-date');
-      const title = el.querySelector('.popup-title').textContent;
-      const description = el.querySelector('.popup-description').textContent;
-      events.push({ date, title, description, id: Date.now() + Math.random() });
-    });
-    events.sort((a, b) => new Date(a.date) - new Date(b.date));
-    saveEvents();
-  }
-  
-  // Render timeline with saved data
+  // Render timeline with data
   renderTimeline();
   
-  // Redraw lines on window resize
+  // Redraw lines on window resize with debounce
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -239,6 +307,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('eventFormContainer').addEventListener('click', (e) => {
     if (e.target.id === 'eventFormContainer') {
       toggleEventForm();
+    }
+  });
+  
+  // Close help when clicking outside
+  document.getElementById('helpModal').addEventListener('click', (e) => {
+    if (e.target.id === 'helpModal') {
+      toggleHelp();
     }
   });
 });
